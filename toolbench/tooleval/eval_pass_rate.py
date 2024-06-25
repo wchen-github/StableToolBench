@@ -1,3 +1,11 @@
+"""
+import debugpy
+debugpy.listen(("localhost", 5678))
+print('listening to port 5678, attach the debugger to continue')
+print(__file__)
+debugpy.wait_for_client()
+"""
+
 from evaluators import load_registered_automatic_evaluator
 import os
 import json
@@ -43,7 +51,7 @@ if __name__ == "__main__":
     args = parse_args()
     evaluators = [load_registered_automatic_evaluator(evaluator_name=args.evaluator, evaluators_cfg_path=os.path.join(abs_dir,'evaluators')) for _ in range(args.max_eval_threads)]
     
-    @backoff.on_exception(backoff.expo, Exception, max_time=15)
+    @backoff.on_exception(backoff.expo, Exception, max_time=300)
     def compute_pass_rate(query_id, example, evaluate_time):
         global evaluators
         evaluator = random.choice(evaluators)
@@ -52,22 +60,26 @@ if __name__ == "__main__":
         if "'name': 'Finish'" not in final_step:
             return query_id, AnswerStatus.Unsolved, evaluate_time
         
-        is_solved, is_solved_reason = evaluator.check_is_solved(
-            {
-                'query':example['query'],
-                'available_tools':example['available_tools'],
-            },
-            example['answer'],
-            return_reason=True
-        )
-
+        try:
+            is_solved, is_solved_reason = evaluator.check_is_solved(
+                {
+                    'query':example['query'],
+                    'available_tools':example['available_tools'],
+                },
+                example['answer'],
+                return_reason=True
+            )
+        except Exception as e:
+            print(f"Error occurred while evaluating query {query_id}: {str(e)}, {str(is_solved)}")
+            raise
+            
         # return query_id, task_solvable, is_solved, label, reason, not_hallucinate, evaluate_time
         return query_id, is_solved, evaluate_time
         
     reference_model = args.reference_model
     output_list = []
     for test_set in args.test_set:
-        reference_path = f"{args.converted_answer_path}/{reference_model}/{test_set}.json"
+        reference_path = f"{args.converted_answer_path}/{test_set}.json"
         test_ids = list(json.load(open(os.path.join(args.test_ids, test_set+".json"), "r")).keys())
         reference_examples = json.load(open(reference_path, "r"))
         if os.path.exists(f"{args.save_path}/{test_set}_{reference_model}.json") and not args.overwrite:
@@ -94,7 +106,11 @@ if __name__ == "__main__":
                     ))
 
             for thd in tqdm(as_completed(future),total=len(future),ncols=100):
-                query_id, is_solved, evaluate_time = thd.result()
+                try:
+                    query_id, is_solved, evaluate_time = thd.result()
+                except Exception as e:
+                    print(f"Error occurred while evaluating query {query_id}: {str(e)})")
+                    continue
                 example = reference_examples[query_id]
                 query = example["query"]
                 tool_names = []

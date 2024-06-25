@@ -1,0 +1,7 @@
+[
+    {
+        "base_url" : "https://dataoai4.openai.azure.com/",
+        "api_version": "2024-02-01",
+        "model" : "dataoai4-gpt4-turbo"
+    }
+]

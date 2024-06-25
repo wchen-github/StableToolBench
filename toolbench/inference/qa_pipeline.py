@@ -1,3 +1,11 @@
+"""
+import debugpy
+debugpy.listen(("localhost", 5678))
+print('listening to port 5678, attach the debugger to continue')
+print(__file__)
+debugpy.wait_for_client()
+"""
+
 '''
 Close-domain QA Pipeline
 '''
@@ -28,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument('--rapidapi_key', type=str, default="",required=False, help='your rapidapi key to request rapidapi service')
     parser.add_argument('--use_rapidapi_key', action="store_true", help="To use customized rapidapi service or not.")
     parser.add_argument('--api_customization', action="store_true", help="To use customized api or not.")
+    parser.add_argument('--subsample_tasks', type=int, default=None, required=False, help='size of a random subset of tasks')
     
     args = parser.parse_args()
 

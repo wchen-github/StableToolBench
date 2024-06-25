@@ -160,6 +160,7 @@ cython_debug/
 #.idea/
 server_raw
 server/tool_response_cache
+server/tool_response_new_cache
 server/tools
 data
 toolenv

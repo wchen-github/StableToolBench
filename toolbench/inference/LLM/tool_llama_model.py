@@ -28,7 +28,9 @@ class ToolLLaMA:
         self.model_name = model_name_or_path
         self.template = template
         self.max_sequence_length = max_sequence_length
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=False, model_max_length=self.max_sequence_length)
+        #self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=False, model_max_length=self.max_sequence_length)
+        #change due to transformers version upgrade
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, model_max_length=self.max_sequence_length)        
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name_or_path, low_cpu_mem_usage=True
         )
@@ -47,7 +49,8 @@ class ToolLLaMA:
                 "prompt": prompt,
                 "temperature": 0.5,
                 "max_new_tokens": 512,
-                "stop": "</s>",
+#                "stop": "</s>",
+                "stop": "<|im_end|>",
                 "stop_token_ids": None,
                 "echo": False
             }

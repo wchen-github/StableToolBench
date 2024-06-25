@@ -21,7 +21,7 @@ from toolbench.utils import (
 )
 
 from toolbench.inference.Downstream_tasks.base_env import base_env
-
+from toolbench.inference.LLM.orca3_model import Orca3
 
 # For pipeline environment preparation
 def get_white_list(tool_root_dir):
@@ -423,6 +423,8 @@ class pipeline_runner:
                 backbone_model = ToolLLaMALoRA(base_name_or_path=args.model_path, model_name_or_path=args.lora_path, max_sequence_length=args.max_sequence_length)
             else:
                 backbone_model = ToolLLaMA(model_name_or_path=args.model_path, max_sequence_length=args.max_sequence_length)
+        elif args.backbone_model == "orca3":
+            backbone_model = Orca3(model_name_or_path=args.model_path, max_sequence_length=args.max_sequence_length)
         else:
             backbone_model = args.backbone_model
         return backbone_model
@@ -469,6 +471,10 @@ class pipeline_runner:
             model = os.getenv('CHAT_MODEL', "gpt-3.5-turbo-16k-0613")
             base_url = os.getenv('OPENAI_API_BASE', None)
             llm_forward = Davinci(model=model, openai_key=openai_key)
+        elif backbone_model == "llama3":
+            base_url = os.environ.get("INFERENCE_API_BASE_URL")
+            model = backbone_model
+            llm_forward = Davinci(model=model, openai_key=openai_key, base_url=base_url)
         else:
             model = backbone_model
             llm_forward = model
@@ -552,6 +558,8 @@ class pipeline_runner:
         random.seed(42)
         random.shuffle(task_list)
         print(f"total tasks: {len(task_list)}")
+        if (self.args.subsample_tasks):
+            task_list = random.sample(task_list, self.args.subsample_tasks)
         new_task_list = []
         for task in task_list:
             out_dir_path = task[-2]

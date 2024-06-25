@@ -12,9 +12,10 @@ from toolbench.inference.Prompts.ReAct_prompts import FORMAT_INSTRUCTIONS_SYSTEM
 
 
 class Davinci:
-    def __init__(self, model="text-davinci-003", openai_key="") -> None:
+    def __init__(self, model="text-davinci-003", openai_key="", base_url = None) -> None:
         super().__init__()
         self.model = model
+        self.base_url = base_url
         self.openai_key = openai_key
         self.chatio = SimpleChatIO()
 
@@ -22,9 +23,13 @@ class Davinci:
         max_try = 10
         while True:
             openai.api_key = self.openai_key
+            if (self.base_url):
+                openai.base_url = self.base_url
             try:
                 response = openai.Completion.create(
-                    engine=self.model,
+                    api_base=self.base_url,
+                    api_key=self.openai_key,           
+                    model=self.model,
                     prompt=prompt,
                     temperature=0.5,
                     max_tokens=512,

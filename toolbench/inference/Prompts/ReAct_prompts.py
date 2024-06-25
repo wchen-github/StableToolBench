@@ -11,6 +11,7 @@ Remember:
 1.the state change is irreversible, you can't go back to one of the former state, if you want to restart the task, say "I give up and restart".
 2.All the thought is short, at most in 5 sentence.
 3.You can do more then one trys, so if your plan is to continusly try some conditions, you can do one of the conditions per try.
+4. Provide one, single Thought, Action and Action Input at a time. Don't try to provide multiple thoughts at once.
 Let's Begin!
 Task description: {task_description}"""
 

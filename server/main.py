@@ -16,6 +16,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
+
 config_file='config.yml'
 CONFIG = yaml.load(open(config_file, 'r'), Loader=yaml.FullLoader)
 print(CONFIG)
@@ -27,6 +28,23 @@ if 'api_base' in CONFIG:
 else:
     OPENAI_API_BASE="https://api.openai.com/v1"
 OPENAI_API_KEY=CONFIG['api_key']
+
+import os
+from openai import AzureOpenAI
+creds_file_path = "/home/wchen/repos/creds_32k.json"
+with open(creds_file_path) as f:
+    creds = json.load(f)
+url = creds[CONFIG['endpoint']][0]
+key = creds[CONFIG['endpoint']][1]
+model = creds[CONFIG['endpoint']][2]
+api_version = "2024-02-15-preview"
+
+import os
+from openai import AzureOpenAI
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from azure.identity import AzureCliCredential
+token_provider = get_bearer_token_provider(AzureCliCredential(), "https://cognitiveservices.azure.com/.default")
+
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -246,9 +264,9 @@ def save_cache(cache, tool_input, result, standard_category, tool_name, api_name
                 return
 
         if not os.path.exists(os.path.join(save_folder, standard_category)):
-            os.mkdir(os.path.join(save_folder, standard_category))
+            os.makedirs(os.path.join(save_folder, standard_category))
         if not os.path.exists(os.path.join(save_folder, standard_category, tool_name)):
-            os.mkdir(os.path.join(save_folder, standard_category, tool_name))    
+            os.makedirs(os.path.join(save_folder, standard_category, tool_name))    
         json.dump(cache, open(os.path.join(save_folder, standard_category, tool_name, api_name+".json"), "w"), indent=4)
     except Exception as e:
         print(f"Save cache failed: {e}")
@@ -278,20 +296,33 @@ Note that:
     user_prompt = "API Documentation:"+str(api_doc)+"\n"+"API Examples:"+str(api_example)[:2048]+"\n"+"API Input:"+str(tool_input)+"\n"
     user_prompt = {"role": "user", "content": user_prompt}
 
-    client = OpenAI(
-        api_key = OPENAI_API_KEY,
-        base_url = OPENAI_API_BASE,
+    #client = OpenAI(
+    #    api_key = OPENAI_API_KEY,
+    #    base_url = OPENAI_API_BASE,
+    #)
+    client = AzureOpenAI(
+    azure_endpoint = url, 
+    api_key=key,  
+    api_version=api_version
     )
     max_retries = 3 
     flag = False
     for attempt in range(max_retries):
+        #response = client.chat.completions.create(
+        #    model = CONFIG['model'],
+        #    messages=[system_prompt, user_prompt],
+        #    max_tokens = 1024,
+        #    response_format = { "type": "json_object" },
+        #    temperature=CONFIG['temperature']
+        #)
         response = client.chat.completions.create(
-            model = CONFIG['model'],
-            messages=[system_prompt, user_prompt],
-            max_tokens = 1024,
-            temperature=CONFIG['temperature'],
-            response_format={"type": "json_object"},
+                model=model,
+                messages=[system_prompt, user_prompt],
+                max_tokens = 1024,
+                #response_format = { "type": "json_object" }, #no longer supported
+                temperature=CONFIG['temperature']
         )
+
         result = response.choices[0].message.content
         if "```json" in result:
             result = result.replace("```json", "").replace("```", "").strip()
